@@ -1,8 +1,8 @@
-; --- ICMC DINO RUN (Versão IMPOSSÍVEL: Velocidade Infinita) ---
+; --- ICMC DINO RUN (Anti-Hold: Não pode segurar espaço) ---
 ;
-; Mudanças:
-; - Título alterado para CALCULUS HORROR.
-; - Limite de velocidade removido. O jogo acelera até o delay ser 1.
+; Lógica de Input alterada:
+; - O jogador é obrigado a soltar a tecla espaço para pular novamente.
+; - Mantém a velocidade infinita e o texto centralizado.
 
 jmp main
 
@@ -21,6 +21,9 @@ jump_timer: var #1
 score: var #1         
 game_speed: var #1    
 rand_seed: var #1
+
+; NOVA VARIÁVEL: Controle de Input
+key_prev: var #1      ; 0 = Solto, 1 = Pressionado (Bloqueado)
 
 ; Variáveis Nuvens
 cloud1_pos: var #1     
@@ -66,6 +69,7 @@ start_game_init:
     store jump_state, r0
     store jump_timer, r0
     store score, r0
+    store key_prev, r0      ; Começa com a tecla solta
     
     loadn r0, #1200         ; Começa Lento
     store game_speed, r0    
@@ -85,12 +89,12 @@ start_game_init:
 ;---- Loop Principal -----
 game_loop:
     
-    call erase_actors       
-    call draw_floor         
+    call erase_actors        
+    call draw_floor          
     
-    call process_input      
+    call process_input       
     call update_physics     
-    call move_obstacle      
+    call move_obstacle       
     call move_clouds        
     
     call check_collision    
@@ -101,24 +105,44 @@ game_loop:
     
     jmp game_loop
 
-;---- Lógica -----
+;---- Lógica de Input (ANTI-HOLD) -----
 
 process_input:
     push r0
     push r1
     push r2
+    
     inchar r0
     loadn r1, #' '
     cmp r0, r1
-    jne end_input
+    jne not_space_pressed   ; Se leu qualquer coisa que não é espaço (ou nada)
+    
+    ; --- Detectou Espaço ---
+    load r1, key_prev       ; Verifica o estado anterior
+    loadn r2, #1
+    cmp r1, r2
+    jeq end_input           ; Se key_prev == 1, o jogador está segurando -> Ignora
+    
+    ; É um "novo" clique
+    store key_prev, r2      ; Trava a tecla (key_prev = 1)
+    
+    ; Tenta Pular (Lógica original de física)
     load r1, jump_state
     loadn r2, #0
     cmp r1, r2
-    jne end_input
+    jne end_input           ; Se não estiver no chão, não faz nada
+    
     loadn r2, #1
     store jump_state, r2 
     loadn r2, #0
     store jump_timer, r2
+    jmp end_input
+
+not_space_pressed:
+    ; Se chegou aqui, o jogador soltou o espaço
+    loadn r1, #0
+    store key_prev, r1      ; Destrava a tecla (key_prev = 0)
+
 end_input:
     pop r2
     pop r1
@@ -224,19 +248,19 @@ reset_obs:
     
     ; --- ACELERAÇÃO INFINITA ---
     load r3, game_speed     
-    loadn r4, #40           ; Diminui o delay em 40 ciclos por ponto
+    loadn r4, #40           ; Acelera tirando 40 do delay
     sub r3, r3, r4          
     
-    ; Trava de segurança apenas para não virar negativo (crash)
+    ; Trava de segurança (Delay mínimo 1)
     loadn r4, #5            
     cmp r3, r4
-    jle force_min_speed     ; Se for menor que 5, trava em 5
+    jle force_min_speed     
     
-    store game_speed, r3    ; Salva nova velocidade
+    store game_speed, r3    
     jmp end_move_obs
 
 force_min_speed:
-    loadn r3, #5            ; Velocidade Máxima Absoluta
+    loadn r3, #5            
     store game_speed, r3
     jmp end_move_obs
 
@@ -341,7 +365,7 @@ game_over:
     loadn r2, #2304
     call print_str
     
-    ; 2. BSI 2025 COLORIDO
+    ; 2. BSI 2025 COLORIDO (Centralizado: 456 + 40 = 496)
     loadn r0, #496          
     
     loadn r1, #'B'
@@ -429,8 +453,9 @@ draw_actors:
     push r2
     push r3
     
-    ; --- TEXTO BSI (NO JOGO) ---
-    loadn r0, #454          
+    ; --- TEXTO BSI (NO JOGO - Centralizado Pos 456) ---
+    loadn r0, #456          
+    
     loadn r1, #'B'
     loadn r2, #2304
     add r1, r1, r2
@@ -514,35 +539,35 @@ draw_actors:
     ; --- ÁRVORE ---
     load r0, cactus_pos
     loadn r1, #'$'
-    loadn r2, #3072     ; Vermelho/Marrom
+    loadn r2, #3072      ; Vermelho/Marrom
     add r1, r1, r2
     outchar r1, r0
     
     loadn r3, #39
-    sub r0, r0, r3      
+    sub r0, r0, r3       
     loadn r1, #'%'
     loadn r2, #3072      ; Verde
     add r1, r1, r2
     outchar r1, r0
 
     ; --- NUVENS ---
-    loadn r2, #0          
+    loadn r2, #0           
     load r0, cloud1_pos
     loadn r1, #'8'
     add r1, r1, r2
-    outchar r1, r0          
+    outchar r1, r0           
     inc r0
     loadn r1, #'9'
     add r1, r1, r2
-    outchar r1, r0          
+    outchar r1, r0           
     load r0, cloud2_pos
     loadn r1, #'8'
     add r1, r1, r2
-    outchar r1, r0          
+    outchar r1, r0           
     inc r0
     loadn r1, #'9'
     add r1, r1, r2
-    outchar r1, r0          
+    outchar r1, r0           
     
     pop r3
     pop r2
@@ -557,9 +582,9 @@ erase_actors:
     push r3
 
     ; COR DE FUNDO (AZUL)
-    loadn r1, #' '          
-    loadn r2, #2560         
-    add r1, r1, r2          
+    loadn r1, #' '           
+    loadn r2, #2560          
+    add r1, r1, r2           
 
     ; Apaga Dinozord
     load r0, dino_pos
@@ -617,11 +642,11 @@ clear_screen:
     push r1
     push r2
     loadn r0, #1199
-    loadn r1, #' '          
-    loadn r2, #2560         
-    add r1, r1, r2          
+    loadn r1, #' '           
+    loadn r2, #2560          
+    add r1, r1, r2           
 loop_clear:
-    outchar r1, r0          
+    outchar r1, r0           
     dec r0
     loadn r2, #0
     cmp r0, r2
