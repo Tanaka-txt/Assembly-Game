@@ -1,10 +1,9 @@
-; --- ICMC DINO RUN (Anti-Hold: Não pode segurar espaço) ---
-;
-; Lógica de Input alterada:
-; - O jogador é obrigado a soltar a tecla espaço para pular novamente.
-; - Mantém a velocidade infinita e o texto centralizado.
+; ------
+; Julio Tanaka
+; Ryan Sulino
+; Leo Eid
 
-jmp main
+jmp main ; Pula para a main ignorando a declaração de variaveis
 
 ;---- Declaração de Variáveis -----
 
@@ -35,13 +34,14 @@ CACTUS_START_POS: var #1 ; 839
 
 ;---- Fim das Variáveis -----
 
+;---- INICIO JOGO -----
 main:
     loadn r0, #805
     store DINO_FLOOR_POS, r0
     loadn r0, #839
     store CACTUS_START_POS, r0
 
-    call clear_screen
+    call clear_screen         ; Função para limpar a tela após a morte do jogador
     loadn r0, #413          ; Centralizado
     loadn r1, #msg_title
     loadn r2, #512          ; Azul
@@ -483,7 +483,7 @@ draw_actors:
     loadn r2, #3584
     add r1, r1, r2
     outchar r1, r0
-    inc r0
+    inc r0 ; r0 + 1
     loadn r1, #'a'
     loadn r2, #3328
     add r1, r1, r2
@@ -664,7 +664,7 @@ print_str:
     push r3
     push r4
     loadn r3, #'\0'
-loop_print:
+loop_print: ; loop para printar na tela
     loadi r4, r1
     cmp r4, r3
     jeq end_print
@@ -673,7 +673,7 @@ loop_print:
     inc r0
     inc r1
     jmp loop_print
-end_print:
+end_print: ;Sub-rotina de delay final
     pop r4
     pop r3
     pop r2
@@ -681,11 +681,11 @@ end_print:
     pop r0
     rts
 
-delay_frame:
+delay_frame: ; sub-rotina de delay-frame
     push r0
     push r1
     load r0, game_speed 
-delay_loop:
+delay_loop: ; Sub-rotina de delay do loop
     dec r0
     jnz delay_loop
     pop r1
