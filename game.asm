@@ -90,10 +90,10 @@ start_game_init: ; Inicia o jogo
 game_loop:
     
     call erase_actors  ; Chama subrotina | linha 578      
-    call draw_floor    ; 
+    call draw_floor    ; Chama subrotina, para printar os atores, integral, pessoa, nuvem, bsi....
     
-    call process_input       
-    call update_physics     
+    call process_input  ; Faz o processo de receber o input do teclado
+    call update_physics ; Fisica do jogo
     call move_obstacle       
     call move_clouds        
     
@@ -107,14 +107,14 @@ game_loop:
 
 ;---- Lógica de Input (ANTI-HOLD) -----
 
-process_input:
-    push r0
+process_input: ; Processo de leitura do teclado
+    push r0 ; Guarda oque havia nos registradores que vamos usar
     push r1
     push r2
     
-    inchar r0
-    loadn r1, #' '
-    cmp r0, r1
+    inchar r0 ; Recebe o input do teclado
+    loadn r1, #' ' ; Salva o edereço do espaço no r1
+    cmp r0, r1 ; Compara se o input é vazio
     jne not_space_pressed   ; Se leu qualquer coisa que não é espaço (ou nada)
     
     ; --- Detectou Espaço ---
@@ -150,14 +150,16 @@ end_input:
     rts
 
 update_physics:
+    ; Salva os registradores que vamos usar no push
     push r0
     push r1
     push r2
     push r3
     push r4
-    load r0, jump_state
-    load r1, dino_pos
-    loadn r4, #40
+    ; Vamos salvar essas posições para poder verificar a fisica
+    load r0, jump_state ; Guarda o estatus do jump no registrador 0
+    load r1, dino_pos ; Salva a posição
+    loadn r4, #40 ; 
     loadn r2, #0
     cmp r0, r2
     jeq phys_ground
@@ -171,6 +173,7 @@ update_physics:
     cmp r0, r2
     jeq phys_descending
     jmp phys_end
+
 phys_ground:
     load r3, DINO_FLOOR_POS
     store dino_pos, r3
@@ -428,39 +431,40 @@ wait_reset:
 
 ;---- Gráficos -----
 
-draw_floor:
-    push r0
+draw_floor: ; Desenha chão
+    push r0 ; Guarda os registradores anteriores
     push r1
     push r2
-    loadn r0, #800
-    loadn r1, #840
-    loadn r2, #'_'
-loop_floor:
-    cmp r0, r1
-    jeq end_floor
-    outchar r2, r0
-    inc r0
-    jmp loop_floor
-end_floor:
-    pop r2
+    loadn r0, #800 ; começo da onde vai ser o chão
+    loadn r1, #840 ; Fim da onde vai ser a ultima linha
+    loadn r2, #'_' ; Caracter do chão
+loop_floor: ; loop do chão
+    cmp r0, r1 ; compara o caracter do inicio e ve se é igual ao ultimo
+    jeq end_floor ; se forem igual pula para o fim de criar chão
+    outchar r2, r0 ; desenha o chão
+    inc r0 ; vai incrementando do começo até o chegar no ultimo chão
+    jmp loop_floor ; se não acabar de printar o chão volta pro loop
+end_floor: ; Fim após terminar de por os 
+    pop r2 ; Pega novamente os resgitradores salvos
     pop r1
     pop r0
-    rts
+    rts ; Retorna para onde tinha saido
 
-draw_actors:
-    push r0
+draw_actors: ; redesenha a posição do personagem e o BSI que fica na tela
+    push r0 ; guarda os registradores
     push r1
     push r2
     push r3
     
     ; --- TEXTO BSI (NO JOGO - Centralizado Pos 456) ---
-    loadn r0, #456          
+    ; Usei outros caracteres para escrever bsi e mudei eles no MIF, pq eu já tava usando pra outra coisa
+    loadn r0, #456 ; Guarda a posição de centralização          
     
-    loadn r1, #'B'
-    loadn r2, #2304
-    add r1, r1, r2
-    outchar r1, r0
-    inc r0
+    loadn r1, #'B' ; Guarda B no r1
+    loadn r2, #2304 ; Guarda cor
+    add r1, r1, r2 ; Coloca cor no B
+    outchar r1, r0 ; Printa
+    inc r0 ; Incrementa r0 para ir para a posição ao lado da primeira letra e continuar as outras
     loadn r1, #'S'
     loadn r2, #512
     add r1, r1, r2
@@ -494,40 +498,40 @@ draw_actors:
     add r1, r1, r2
     outchar r1, r0
 
-    ; --- DINOZORD ---
-    loadn r2, #512 
+    ; --- DINO FAKE QUE É UMA PESSOA ---
+    loadn r2, #512  ; 
     load r0, dino_pos
     loadn r3, #120
     sub r0, r0, r3
-    loadn r1, #'5'
+    loadn r1, #'5' ; Cabeça
     add r1, r1, r2
     outchar r1, r0
     load r0, dino_pos
-    loadn r3, #80
+    loadn r3, #80 
     sub r0, r0, r3
-    loadn r1, #'4'
+    loadn r1, #'4' ; Braço esquerdo
     add r1, r1, r2
     outchar r1, r0
     dec r0
-    loadn r1, #'6'
+    loadn r1, #'6' ; Tronco
     add r1, r1, r2
     outchar r1, r0
     load r0, dino_pos
     loadn r3, #80
     sub r0, r0, r3
     inc r0
-    loadn r1, #'7'
+    loadn r1, #'7' ; Braço direito
     add r1, r1, r2
     outchar r1, r0
     load r0, dino_pos
     loadn r3, #40
     sub r0, r0, r3
-    loadn r1, #'2'
+    loadn r1, #'2' ; Perna esquerda
     add r1, r1, r2
     outchar r1, r0
     load r0, dino_pos
     dec r0
-    loadn r1, #'1'
+    loadn r1, #'1' ; Perna direita
     add r1, r1, r2
     outchar r1, r0
     load r0, dino_pos
@@ -536,44 +540,44 @@ draw_actors:
     add r1, r1, r2
     outchar r1, r0
     
-    ; --- ÁRVORE ---
-    load r0, cactus_pos
-    loadn r1, #'$'
-    loadn r2, #3072      ; Vermelho/Marrom
-    add r1, r1, r2
-    outchar r1, r0
-    
+    ; --- ÁRVORE --- 
+    load r0, cactus_pos ; Aqui recebemos o cactus_pos para o registrador r0
+    loadn r1, #'$' ; Topo da integral
+    loadn r2, #3072 ; Cor
+    add r1, r1, r2 ; Adiciona cor com o registrador
+    outchar r1, r0 ; Printa 
+    ; Acontece a mesma coisa com a parte de baixo
     loadn r3, #39
     sub r0, r0, r3       
-    loadn r1, #'%'
-    loadn r2, #3072      ; Verde
+    loadn r1, #'%' ; Caracter da parte de baixo
+    loadn r2, #3072      
     add r1, r1, r2
     outchar r1, r0
 
-    ; --- NUVENS ---
+    ; --- NUVENS --- Temos 2 arvores que são formadas por 2 caracteres
     loadn r2, #0           
     load r0, cloud1_pos
-    loadn r1, #'8'
+    loadn r1, #'8' ; Caracter da nuvem 1.1
     add r1, r1, r2
     outchar r1, r0           
     inc r0
-    loadn r1, #'9'
+    loadn r1, #'9' ; Caracter da nuvem 1.2
     add r1, r1, r2
     outchar r1, r0           
     load r0, cloud2_pos
-    loadn r1, #'8'
+    loadn r1, #'8' ; Caracter da nuvem 2.1
     add r1, r1, r2
     outchar r1, r0           
     inc r0
-    loadn r1, #'9'
+    loadn r1, #'9' ; Caracter da nuvem 2.2
     add r1, r1, r2
-    outchar r1, r0           
-    
+    outchar r1, r0    ; Printa       
+    ; Pega de novo oq havia guardado
     pop r3
     pop r2
     pop r1
     pop r0
-    rts
+    rts ; Resotrna onde parou
 
 erase_actors: ; Apaga a posição antiga para poder ocorrer os movimentos
     push r0 ; Salva tudo que tinha salvo nos registradores na memória
