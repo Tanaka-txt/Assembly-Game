@@ -93,12 +93,12 @@ game_loop:
     call draw_floor    ; Chama subrotina, para printar os atores, integral, pessoa, nuvem, bsi....
     
     call process_input  ; Faz o processo de receber o input do teclado
-    call update_physics ; Fisica do jogo
-    call move_obstacle       
-    call move_clouds        
+    call update_physics ; Fisica do dino
+    call move_obstacle  ; Fisica do obstáculo   Movimento da "arvore / integral"
+    call move_clouds    ; Movimento da "nuvem"
     
-    call check_collision    
-    call draw_actors        
+    call check_collision ; Verifica colisão do personagem com a integral verificando se algum momento a posição deles é a mesma
+    call draw_actors  ; Desenha os "atores"      
     
     call delay_frame        
     inc r7
@@ -157,15 +157,18 @@ update_physics:
     push r3
     push r4
     ; Vamos salvar essas posições para poder verificar a fisica
-    load r0, jump_state ; Guarda o estatus do jump no registrador 0
-    load r1, dino_pos ; Salva a posição
-    loadn r4, #40 ; 
-    loadn r2, #0
-    cmp r0, r2
-    jeq phys_ground
-    loadn r2, #1
-    cmp r0, r2
-    jeq phys_ascending
+    load r0, jump_state ; Guarda o estatus do jump no registrador 0 (estado atual do jump)
+    load r1, dino_pos ; Salva a posição (posição atual do dino)
+    loadn r4, #40 ; salva o endereço da posição do pulo
+    loadn r2, #0 ; Salva o endereço da posição do chão
+
+    cmp r0, r2 ; Compara  se o estado do chão se for igual ele vão para subrotina phys_ground
+    jeq phys_ground ; Situação de estando no chão
+
+    loadn r2, #1 ; Carrega 1 para o r2
+    cmp r0, r2 ; Compara se o chão temporário dele for for a posição 1, jampa para o phys_ascending
+    jeq phys_ascending ; 
+
     loadn r2, #2
     cmp r0, r2
     jeq phys_top
@@ -175,47 +178,53 @@ update_physics:
     jmp phys_end
 
 phys_ground:
-    load r3, DINO_FLOOR_POS
-    store dino_pos, r3
-    jmp phys_end
-phys_ascending:
-    sub r1, r1, r4
-    store dino_pos, r1
-    load r2, jump_timer
-    inc r2
+    load r3, DINO_FLOOR_POS ; Salva no r3 a posição do chão 0
+    store dino_pos, r3 ; Guarda 
+    jmp phys_end ; Pula para subrotina fim de fisica
+
+phys_ascending: ; Subida até atingir a altura maxima
+    sub r1, r1, r4 ; r1 = posição dino - 40 (pulo) | para saber qual é a altura do dino
+    store dino_pos, r1 ;  Guarda a altura
+    load r2, jump_timer ; Usamos para contagem de frames que ele subiu
+    inc r2 ; Incrementa o timar
     store jump_timer, r2
-    loadn r3, #4
-    cmp r2, r3
-    jne phys_end
+    loadn r3, #4 ; Salva o valor para saber a linha de limite
+    cmp r2, r3 ; Compara o limite com os frames
+    jne phys_end ; If for igual a 4 ele jampa pra subrotina de end
     loadn r2, #2
     store jump_state, r2
     loadn r2, #0
     store jump_timer, r2
     jmp phys_end
-phys_top:
-    load r2, jump_timer
-    inc r2
-    store jump_timer, r2
-    loadn r3, #2
-    cmp r2, r3
-    jne phys_end
-    loadn r2, #3
-    store jump_state, r2
-    loadn r2, #4
-    store jump_timer, r2
-    jmp phys_end
-phys_descending:
-    add r1, r1, r4
-    store dino_pos, r1
-    load r2, jump_timer
-    dec r2
-    store jump_timer, r2
-    loadn r3, #0
-    cmp r2, r3
-    jne phys_end
-    loadn r2, #0
-    store jump_state, r2
-    jmp phys_end
+
+phys_top: ; Fisica no topo , pairando
+    ;Estado 1
+    load r2, jump_timer ; Ele carrega no r2 o o time do jump
+    inc r2 ; Incrementa
+    store jump_timer, r2 ; Salva o jump_timer r2
+    loadn r3, #2 ; Carrega com o valor 2 no r3
+    cmp r2, r3 ; Compara para ver se deu o tempo de pairar
+    jne phys_end ; Se deu ele jumpa para o end
+    ;Estado 2
+    loadn r2, #3 ; Carrega o 3 no r3 como parametro
+    store jump_state, r2 ; salva o jump state para saber que está na altura
+    loadn r2, #4 ; Coloca no r2 o valor de 4
+    store jump_timer, r2 ; Guarda o jump timer, para registrar
+    jmp phys_end ; Após isso pula para o fim
+
+phys_descending: ; Dino cai no chão
+    add r1, r1, r4 ; posição dino + 40 = queda do dino | faz descer pois vc coloca 40 caracteres ai da \n
+    store dino_pos, r1 ; Guarda a posição + 40 
+    load r2, jump_timer ; salva o jump timer no r2
+    dec r2 ; decrementa o r2
+    store jump_timer, r2 ; Salva o jump timer = 3
+    loadn r3, #0 ; salva o 0 posição do chão no r3
+    cmp r2, r3 ; compara para ver se está igual ao chão 
+    jne phys_end ; se não for igual ele jampa para o end
+    loadn r2, #0 ; se for ele salva o 0 no r2
+    store jump_state, r2 ; e da estore no jump_state com o r2
+    jmp phys_end ; jampa pro fim
+
 phys_end:
     pop r4
     pop r3
@@ -224,50 +233,51 @@ phys_end:
     pop r0
     rts
 
-move_obstacle:
-    push r0
+move_obstacle: ;Movimentação da integral 
+    push r0 ; Salva oq havia nos registradores que vamos usar, na memória
     push r1
     push r2
     push r3
     push r4 
     
-    load r0, cactus_pos
-    dec r0
+    load r0, cactus_pos ; Carrega a posição start do cacto no r0 (ex. 839
+    dec r0 ; Recrementa a posição (ex. 838)
     
-    loadn r1, #800
-    cmp r0, r1
-    jle reset_obs
+    loadn r1, #800 ; Linha começa no endereço 800 e termina no 809
+    cmp r0, r1 ; Compara para verificar se ele chegou no limite esquerdo da tela
+    jle reset_obs ; jampa se r0 < r1
     
-    store cactus_pos, r0
-    jmp end_move_obs
+    store cactus_pos, r0 ; Salva o r0 no cactos pos
+    jmp end_move_obs ; jampa para o end
 
-reset_obs:
-    load r0, CACTUS_START_POS
-    store cactus_pos, r0
+reset_obs: ; Quando o cacto sai da tela isso é executado
+    load r0, CACTUS_START_POS ; a posição inicial do cacto é salva em r0
+    store cactus_pos, r0 ; o valor de r0 é salvo na memoria com o cactus_pos
     
-    load r2, score
-    inc r2
+    ; Contador de score
+    load r2, score ; Conta ponto pois o player sobrevivel, isso em si nem aparece pro player, mas é um cotabilizador para podermos aumentar a dificuldade
+    inc r2 
     store score, r2
     
     ; --- ACELERAÇÃO INFINITA ---
-    load r3, game_speed     
+    load r3, game_speed ; Carrega um delay atual   (ex.1200)  
     loadn r4, #40           ; Acelera tirando 40 do delay
-    sub r3, r3, r4          
+    sub r3, r3, r4          ; ex. r3(novo delay) = 1200 - 40 = 1160
     
     ; Trava de segurança (Delay mínimo 1)
-    loadn r4, #5            
-    cmp r3, r4
-    jle force_min_speed     
-    
-    store game_speed, r3    
-    jmp end_move_obs
+    ; Estava tendo um problema que se deixasse infinitamente ele ia dar um unflow, isso faria o delay travar ou não funcionar, pois um numero negativo pode ser representado como um nuemro positivo gigante
+    loadn r4, #5  ; Registra o valor 5 no r4
+    cmp r3, r4 ; Compare se o game_speed <= 5 ele chega no mim speed
+    jle force_min_speed   
+    store game_speed, r3  ; Se não ele salva o novo delay  
+    jmp end_move_obs ; Jampa pro end
 
-force_min_speed:
+force_min_speed: ; Aqui forçamos o min speed
     loadn r3, #5            
-    store game_speed, r3
-    jmp end_move_obs
+    store game_speed, r3 ; Travamos o jogo com 5 de game-speed
+    jmp end_move_obs ; Jampa fim
 
-end_move_obs:
+end_move_obs: ; Retorna onde parou
     pop r4
     pop r3
     pop r2
@@ -275,80 +285,86 @@ end_move_obs:
     pop r0
     rts
 
-move_clouds:
-    push r0
+move_clouds: ; Movimentação da nuvem
+    push r0 ; Guarda oq tinha nos registradores dentro da memoria
     push r1
     push r2
+
     ; NUVEM 1
-    load r0, cloud1_pos
-    dec r0
-    loadn r1, #120
-    cmp r0, r1
-    jgr save_cloud1
-    loadn r0, #158          
+    load r0, cloud1_pos ; r0 recebe o cloud1
+    dec r0 ; decrementa movento para esquerda a nuvem
+    loadn r1, #120 ; r1 recebe o valor de 120 | limite esquerda (3*40 = 120)
+    cmp r0, r1 ; Compara a movimentação para esquerda para ver se é igual
+    jgr save_cloud1 ; se posição > 120 ele jampa para subrotina save_cloud1
+    loadn r0, #158    ; Reseta para o canto direito
+
 save_cloud1:
-    store cloud1_pos, r0
+    store cloud1_pos, r0 ; Salva a pos da nuvem 
+
     ; NUVEM 2
-    load r0, cloud2_pos
-    dec r0
-    loadn r1, #200
-    cmp r0, r1
-    jgr save_cloud2
-    loadn r0, #238          
-save_cloud2:
+    load r0, cloud2_pos ; r0 recebe o cloud2
+    dec r0 ; Decrementamos, movendo ele para esquerda
+    loadn r1, #200; limite esquerda é (5*4 = 2000)
+    cmp r0, r1 ; Compara pos == 200 ?
+    jgr save_cloud2 ; jampa se posi > 200, save_cloud2
+    loadn r0, #238 ; reset para voltar
+
+save_cloud2: ; Salva tudo e retorna
     store cloud2_pos, r0
     pop r2
     pop r1
     pop r0
     rts
 
-check_collision:
+check_collision: ; Checagem de colisão
     push r0
     push r1
     push r2
     push r3
     push r4
     
-    load r0, dino_pos
-    load r1, cactus_pos
+    load r0, dino_pos ; r0 recebe pos do personagem
+    load r1, cactus_pos ; r1 recebe a pos do "cacto"
     
     ; --- 1. CHECAGEM DO TRONCO ($) ---
-    sub r2, r0, r1      ; Delta = Dino - Tronco
+    sub r2, r0, r1      ; r2 = Posi Dino - Posi Tronco | isso não pode ser 0 pq ai eles tão na mesma posição 
     
-    loadn r4, #0
+    ; tronco
+    loadn r4, #0 ; r4 comparação para ver se está certo
+    cmp r2, r4 ; se é 0 bateu
+    jeq game_over ; Perdeu se bateu
+    ; Braço direto
+    loadn r4, #1 
     cmp r2, r4
     jeq game_over
-    
-    loadn r4, #1
-    cmp r2, r4
-    jeq game_over
-    
+    ; Perna esquerda
     loadn r4, #0
     dec r4              ; -1
     cmp r2, r4
     jeq game_over
     
-    ; --- 2. CHECAGEM DA COPA (q) ---
+    ; --- 2. CHECAGEM topo integral (pulo baixo) ---
     load r1, cactus_pos
-    loadn r4, #39       ; Offset da copa
+    loadn r4, #39       ; Offset da copa | 39 = sobre um dilha e vira um pra direita
     sub r1, r1, r4      ; r1 = posição do 'q'
     
-    sub r2, r0, r1      ; Delta = Dino - Copa
+    sub r2, r0, r1      ; r2 = Dino - Topo
     
-    loadn r4, #0
-    cmp r2, r4
-    jeq game_over
+    loadn r4, #0 ; Salva o 0
+    cmp r2, r4 ; Verifica se é 0
+    jeq game_over ; Perdeu se for 0
     
-    loadn r4, #1
-    cmp r2, r4
-    jeq game_over
+    ; Essa é o meio das pernas
+    loadn r4, #1 ; Carrega 1
+    cmp r2, r4  ; Compara posi dito com 1
+    jeq game_over ; Se bater over
     
     loadn r4, #0
     dec r4
     cmp r2, r4
     jeq game_over
     
-    jmp end_col_check
+    jmp end_col_check ; Fim
 
 end_col_check:
     pop r4
@@ -692,10 +708,11 @@ end_print: ; sub rotina para o final do print, pega oq havia alocado na memória
     rts ; Retorna onde havia dado o call
 
 delay_frame: ; sub-rotina de delay-frame
-    push r0
+    push r0 ; libera os resistradores
     push r1
-    load r0, game_speed 
-delay_loop: ; Sub-rotina de delay do loop
+    load r0, game_speed ; Processador burro tem que mandar ele contar até um numero alto ksks
+
+delay_loop: ; Sub-rotina de delay do loop , aqui enrolamos o clock fazendo o delay de 1200 e que diminui
     dec r0
     jnz delay_loop
     pop r1
