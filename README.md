@@ -9,7 +9,7 @@ Este projeto é uma implementação completa de um jogo estilo Endless Runner de
 ---
 
 📸 Screenshots
-![image](image.png)
+![image](Pasted image.png)
 
 #### Link vídeo: https://youtu.be/kaRp4521eVg
 
