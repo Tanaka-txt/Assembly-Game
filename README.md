@@ -99,7 +99,7 @@ draw_actors / erase_actors: Manipulação direta de buffer de vídeo.
 
 ---
 
-## 👨‍💻 Autor
+## 👨‍💻 Autors
 Projeto desenvolvido para a disciplina de Arquitetura de Computadores (BSI 2025 - USP/ICMC).
 
 **Dev.Tanaka**
